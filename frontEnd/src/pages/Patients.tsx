@@ -1,6 +1,8 @@
 import { Search, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getPatients, createPatient } from '../services/patientsService';
+import { Patient } from '../types/types';
 
 const phaseColors = {
   consulting: 'bg-blue-100 text-blue-800',
@@ -24,39 +26,30 @@ const initialPatient ={
 
 type InputChangeEvent = React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
 const Patients = () => {
+
   const navigate = useNavigate();
-  const [patients, setPatients] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      age: 45,
-      gender: 'Male',
-      bloodType: 'A+',
-      contact: '+1 234 567 890',
-      email: 'john.doe@email.com',
-      address: '123 Main St, City, Country',
-      emergencyContact: 'Jane Doe (+1 234 567 891)',
-      lastVisit: '2024-03-15',
-      phase: 'consulting',
-      medicalHistory: [
-        { date: '2024-03-15', condition: 'Hypertension', notes: 'Prescribed medication' },
-        { date: '2024-02-20', condition: 'Regular Checkup', notes: 'All vitals normal' }
-      ],
-      medications: [
-        { name: 'Lisinopril', dosage: '10mg', frequency: 'Daily' },
-        { name: 'Aspirin', dosage: '81mg', frequency: 'Daily' }
-      ],
-      allergies: ['Penicillin', 'Peanuts'],
-      upcomingAppointments: [
-        { date: '2024-04-01', time: '10:00 AM', doctor: 'Dr. Smith', type: 'Follow-up' }
-      ]
-    }
-  ]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [phaseFilter, setPhaseFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPatient, setNewPatient] = useState(initialPatient);
   
+
+  useEffect(()=>{
+    fetchPatients();
+  }, []);
+
+
+  const fetchPatients = async () => {
+    try {
+      const response = await getPatients();
+      console.log(response);
+      setPatients(response);
+    } catch (error) {
+      console.error("Failed to fetch patients:", error);
+    }
+  };
+
   const addPatient = () => {
     setIsModalOpen(true);
   };
@@ -73,10 +66,29 @@ const Patients = () => {
     setNewPatient((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
-    setPatients((prev) => [...prev, { ...newPatient, id: prev.length + 1, age: Number(newPatient.age), medicalHistory: [], medications: [], allergies: [], upcomingAppointments: [] }]);
+  const handleSubmit = async () => {
+    try{
+      const newPatientData = {
+        ...newPatient,
+        age: parseInt(newPatient.age),
+      };
+
+      const response = await createPatient(newPatientData);
+      if(response){
+        fetchPatients();
+      }
+      
+
+    }catch(error){
+      console.error("Failed to create patient:", error);
+    }
+    setNewPatient(initialPatient);
     closeModal();
   };
+
+  if (!patients) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
@@ -130,7 +142,7 @@ const Patients = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {patients.filter(patient => (!phaseFilter || patient.phase === phaseFilter) && patient.name.toLowerCase().includes(nameFilter.toLowerCase())).map((patient) => (
-                <tr key={patient.id} className="hover:bg-gray-50">
+                <tr key={patient._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{patient.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.age}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.gender}</td>
@@ -140,7 +152,7 @@ const Patients = () => {
                     <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${phaseColors[patient.phase as keyof typeof phaseColors]}`}>{patient.phase}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button onClick={() => navigate(`/patients/${patient.id}`)} className="text-blue-600 hover:underline">View Details</button>
+                    <button onClick={() => navigate(`/patients/${patient._id}`)} className="text-blue-600 hover:underline">View Details</button>
                   </td>
                 </tr>
               ))}
