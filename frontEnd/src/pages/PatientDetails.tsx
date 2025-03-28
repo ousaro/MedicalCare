@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Edit, Calendar, ReceiptText } from 'lucide-react';
 import { getPatient, updatePatient } from '../services/patientsService';
-import { Patient, InputChangeEvent } from '../types/types';
+import { Patient, InputChangeEvent, Appointment } from '../types/types';
+import { getPatientAppointments } from '../services/appointmentsService';
+import AppointmentList from '../components/AppointmentsList';
 
 
 const phaseColors = {
@@ -19,12 +21,11 @@ const PatientDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [patient, setPatient] = useState<Partial<Patient>>({});
   const [updatedPatient, setUpdatedPatient] = useState<Partial<Patient>>({});
-  const [upcomingAppointments, setUpcomingAppointments] = useState([
-    { date: '2024-04-01', time: '10:00 AM', doctor: 'Dr. Smith', type: 'Follow-up' }
-  ]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
 
   useEffect(()=>{
     fetchPatient();
+    fetchAppointments();
   },[])
 
   const fetchPatient = async () => {
@@ -38,6 +39,17 @@ const PatientDetails = () => {
       }
     } catch (error) {
       console.error("Failed to fetch patient:", error);
+    }
+  }
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await getPatientAppointments(id);
+      if (response) {
+        setUpcomingAppointments(response);
+      } 
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
     }
   }
 
@@ -168,16 +180,7 @@ const PatientDetails = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Upcoming Appointments</h2>
             <div className="space-y-3">
-              {upcomingAppointments.map((appointment, index) => (
-                <div key={index} className="flex items-center p-3 border rounded-lg">
-                  <Calendar className="w-5 h-5 mr-3 text-gray-500" />
-                  <div>
-                    <div className="font-medium">{appointment.type}</div>
-                    <div className="text-sm text-gray-500">{appointment.date} at {appointment.time}</div>
-                    <div className="text-sm text-gray-500">{appointment.doctor}</div>
-                  </div>
-                </div>
-              ))}
+              <AppointmentList filteredAppointments={upcomingAppointments} onStatusUpdate={()=>{}} isEditable={false}/>
             </div>
           </div>
 

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo_service2
+    restart: always
+    ports:
+      - "27018:27017"  # Avoid port conflict
+    volumes:
+      - mongo_data_service2:/data/db
+
+volumes:
+  mongo_data_service2:
+    driver: local

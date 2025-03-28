@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getPatients, createPatient } from '../services/patientsService';
 import { Patient } from '../types/types';
+import { createMedicalRecord } from '../services/medicalRecordService';
 
 const phaseColors = {
   consulting: 'bg-blue-100 text-blue-800',
@@ -75,7 +76,8 @@ const Patients = () => {
 
       const response = await createPatient(newPatientData);
       if(response){
-        fetchPatients();
+        await createMedicalRecord({patientId: response._id});
+        setPatients((prev) => [...prev, response]);
       }
       
 

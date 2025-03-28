@@ -10,7 +10,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const menuItems = [
     { icon: Users, label: 'Patients', path: '/patients' },
     { icon: Calendar, label: 'Appointments', path: '/appointments' },
-    { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
+    // { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
   ];
 
   return (

@@ -1,26 +1,37 @@
-import { ArrowLeft, FileText, Plus, X } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Edit, FileText, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { MedicalRecord } from "../types/types";
+import { getPatientMedicalRecord, updateMedicalRecord } from "../services/medicalRecordService";
 
-export const MedicalRecord = () => {
+
+
+export const MedicalRecordPage = () => {
+    const { id } = useParams();
     const navigate = useNavigate();
-    const [medicalRecord, setMedicalRecord] = useState({
-        id: 1,
-        patientId: 1,
-        medicalHistory: [
-            { date: '2024-03-15', condition: 'Hypertension', notes: 'Prescribed medication' },
-            { date: '2024-02-20', condition: 'Regular Checkup', notes: 'All vitals normal' }
-        ],
-        medications: [
-            { name: 'Lisinopril', dosage: '10mg', frequency: 'Daily' },
-            { name: 'Aspirin', dosage: '81mg', frequency: 'Daily' }
-        ],
-        condition: "Hypertension",
-        allergies: ['Penicillin', 'Peanuts'],
-    });
+    const [medicalRecord, setMedicalRecord] = useState<Partial<MedicalRecord>>({});
 
     const [modal, setModal] = useState('');
     const [formData, setFormData] = useState({ name: "", dosage: "", frequency: "" });
+
+
+    useEffect(() => {
+        const fetchMedicalRecord = async () => {
+            try {
+                if(!id) return;
+                const response = await getPatientMedicalRecord(id);
+                if (response) {
+                    setMedicalRecord(response);
+                }
+            } catch (error) {
+                console.error("Failed to fetch medical record:", error);
+            }
+        }
+
+        fetchMedicalRecord();
+
+    }, []);
+
 
     const openModal = (type:string) => setModal(type);
     const closeModal = () => {
@@ -28,16 +39,62 @@ export const MedicalRecord = () => {
         setFormData({ name: "", dosage: "", frequency: "" });
     };
 
-    const handleAdd = () => {
-        if (modal === "allergy" && formData.name) {
-            setMedicalRecord({ ...medicalRecord, allergies: [...medicalRecord.allergies, formData.name] });
-        } else if (modal === "medication" && formData.name && formData.dosage && formData.frequency) {
-            setMedicalRecord({
-                ...medicalRecord,
-                medications: [...medicalRecord.medications, { ...formData }],
-            });
+    const handleAdd = async () => {
+        if (!medicalRecord._id) {
+            console.error('No medical record ID available');
+            return;
         }
-        closeModal();
+
+        try {
+            let updates: Partial<MedicalRecord> = {};
+
+            switch (modal) {
+                case 'allergy':
+                    if (formData.name) {
+                        updates = {
+                            allergies: [
+                                ...(medicalRecord.allergies || []), 
+                                formData.name
+                            ]
+                        };
+                    }
+                    break;
+
+                case 'condition':
+                    if (formData.name) {
+                        updates = {
+                            condition: formData.name
+                        };
+                    }
+                    break;
+
+                case 'medication':
+                    if (formData.name && formData.dosage && formData.frequency) {
+                        updates = {
+                            medications: [
+                                ...(medicalRecord.medications || []),
+                                {
+                                    name: formData.name,
+                                    dosage: formData.dosage,
+                                    frequency: formData.frequency
+                                }
+                            ]
+                        };
+                    }
+                    break;
+            }
+
+            const updatedRecord = await updateMedicalRecord(medicalRecord._id, updates);
+            
+            if (updatedRecord) {
+                setMedicalRecord(updatedRecord);
+                // Reset form and close modal
+                setFormData({ name: "", dosage: "", frequency: "" });
+                setModal("");
+            }
+        } catch (error) {
+            console.error('Error updating medical record:', error);
+        }
     };
 
     return (
@@ -53,7 +110,13 @@ export const MedicalRecord = () => {
 
             <div className="space-y-6">
                 <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-semibold mb-4">Condition</h2>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold mb-4">Condition</h2>
+                        <button onClick={() => openModal("condition")} className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600">
+                            <Edit className="w-5 h-5" />
+                        </button>
+                    </div>
+                    
                     <div className="text-sm text-gray-500">{medicalRecord.condition}</div>
                 </div>
 
@@ -65,7 +128,7 @@ export const MedicalRecord = () => {
                         </button>
                     </div>
                     <div className="space-y-3">
-                        {medicalRecord.medications.map((medication, index) => (
+                        {medicalRecord.medications?.map((medication, index) => (
                             <div key={index} className="p-3 border rounded-lg">
                                 <div className="font-medium">{medication.name}</div>
                                 <div className="text-sm text-gray-500">{medication.dosage} - {medication.frequency}</div>
@@ -82,7 +145,7 @@ export const MedicalRecord = () => {
                         </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {medicalRecord.allergies.map((allergy, index) => (
+                        {medicalRecord.allergies?.map((allergy, index) => (
                             <span key={index} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
                                 {allergy}
                             </span>
@@ -93,7 +156,7 @@ export const MedicalRecord = () => {
                 <div className="bg-white rounded-lg shadow-md p-6">
                     <h2 className="text-xl font-semibold mb-4">Medical History</h2>
                     <div className="space-y-4">
-                        {medicalRecord.medicalHistory.map((record, index) => (
+                        {medicalRecord.medicalHistory?.map((record, index) => (
                             <div key={index} className="flex items-start p-4 border rounded-lg">
                                 <FileText className="w-5 h-5 mr-3 text-gray-500" />
                                 <div>
